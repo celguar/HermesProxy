@@ -1,0 +1,169 @@
+name: Windows Release Original
+
+# on: ['push']
+# use manual run
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release Tag'
+        required: true
+        default: '3.7'
+        type: string
+      update_release:
+        description: 'Update Release'
+        required: true
+        default: true
+        type: boolean
+
+env:
+  DOTNET_VERSION: '6.0.x'
+
+jobs:          
+  add_launcher:
+    runs-on: ubuntu-20.04
+    permissions:
+      contents: write
+    
+    steps:
+    
+      - name: Download Hermes Proxy
+        uses: dsaltares/fetch-gh-release-asset@master
+        with:
+          repo: WowLegacyCore/HermesProxy
+          file: HermesProxy-Windows-v${{ inputs.tag }}.zip
+          target: HermesProxy-Windows-v${{ inputs.tag }}.zip
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Extract Hermes Proxy
+        uses: montudor/action-zip@v1
+        with:
+          args: unzip -qq HermesProxy-Windows-v${{ inputs.tag }}.zip -d proxy
+          
+      - name: Download Classic Launcher
+        uses: dsaltares/fetch-gh-release-asset@master
+        with:
+          file: hermes_launcher_classic.zip
+          target: hermes_launcher_classic.zip
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Download TBC Launcher
+        uses: dsaltares/fetch-gh-release-asset@master
+        with:
+          file: hermes_launcher_tbc.zip
+          target: hermes_launcher_tbc.zip
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Extract Classic Launcher
+        uses: montudor/action-zip@v1
+        with:
+          args: unzip -qq hermes_launcher_classic.zip -d classic
+          
+      - name: Extract TBC Launcher
+        uses: montudor/action-zip@v1
+        with:
+          args: unzip -qq hermes_launcher_tbc.zip -d tbc
+          
+      - name: Update Proxy
+        run: |
+          rm "hermes_launcher_classic.zip"
+          rm "hermes_launcher_tbc.zip"
+          mkdir -m777 -p classic_launcher/Hermes\ Launcher/hermes_proxy
+          mkdir -m777 -p tbc_launcher/Hermes\ Launcher/hermes_proxy
+          cp "classic/Start WoW Classic.bat" classic_launcher
+          cp "tbc/Start WoW TBC.bat" tbc_launcher
+          cp -r "classic/Hermes Launcher/arctium_launcher" classic_launcher/Hermes\ Launcher
+          cp -r "tbc/Hermes Launcher/arctium_launcher" tbc_launcher/Hermes\ Launcher
+          cp -r "classic/Hermes Launcher/update_tools" classic_launcher/Hermes\ Launcher
+          cp -r "tbc/Hermes Launcher/update_tools" tbc_launcher/Hermes\ Launcher
+          cp classic/Hermes\ Launcher/*.bat classic_launcher/Hermes\ Launcher
+          cp tbc/Hermes\ Launcher/*.bat tbc_launcher/Hermes\ Launcher
+          cp -r proxy/* classic_launcher/Hermes\ Launcher/hermes_proxy
+          cp -r proxy/* tbc_launcher/Hermes\ Launcher/hermes_proxy
+          sed -i 's/value=\"40618\"/value=\"42597\"/' classic_launcher/Hermes\ Launcher/hermes_proxy/HermesProxy.config
+          sed -i 's/value=\"40618\"/value=\"42328\"/' tbc_launcher/Hermes\ Launcher/hermes_proxy/HermesProxy.config
+          sed -i 's/\"PacketsLog\" value=\"true\"/\"PacketsLog\" value=\"false\"/' classic_launcher/Hermes\ Launcher/hermes_proxy/HermesProxy.config
+          sed -i 's/\"PacketsLog\" value=\"true\"/\"PacketsLog\" value=\"false\"/' tbc_launcher/Hermes\ Launcher/hermes_proxy/HermesProxy.config
+          
+      # mv classic/proxy/CSV/* classic/launcher/Hermes Launcher/hermes_proxy/CSV/
+          
+     # - name: Archive Classic Launcher
+     #   uses: montudor/action-zip@v1
+     #   with:
+     #     args: zip -qq -r hermes_launcher_classic.zip classic_launcher
+          
+      - name: Archive Classic Launcher
+        run: zip -qq -r hermes_launcher_classic.zip *
+        working-directory: classic_launcher
+        
+      - name: Archive TBC Launcher
+        run: zip -qq -r hermes_launcher_tbc.zip *
+        working-directory: tbc_launcher
+          
+     # - name: Archive TBC Launcher
+     #   uses: montudor/action-zip@v1
+     #   with:
+     #     args: zip -qq -r hermes_launcher_tbc.zip tbc_launcher
+          
+      - name: Upload Classic Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: hermes_launcher_classic_${{ github.sha }}
+          path: classic_launcher/hermes_launcher_classic.zip
+          if-no-files-found: error
+          
+      - name: Upload TBC Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: hermes_launcher_tbc_${{ github.sha }}
+          path: tbc_launcher/hermes_launcher_tbc.zip
+          if-no-files-found: error
+
+  upload:
+    if: ${{ inputs.update_release }}
+    runs-on: ubuntu-20.04
+    permissions:
+      contents: write
+    needs: add_launcher
+
+    steps:
+      #- name: Download artifact snapshot-default
+      #  uses: actions/download-artifact@v1
+      #  with:
+      #    name: snapshot-default
+      #    path: all_snapshots
+      - name: Download Classic Artifact
+        uses: actions/download-artifact@v1
+        with:
+          name: hermes_launcher_classic_${{ github.sha }}
+          path: releases
+          
+      - name: Download TBC Artifact
+        uses: actions/download-artifact@v1
+        with:
+          name: hermes_launcher_tbc_${{ github.sha }}
+          path: releases
+
+      - name: Get current date
+        id: date
+        run: echo "::set-output name=date::$(date +'%d.%m.%y')"        
+        
+      - name: Upload Classic Launcher
+        uses: svenstaro/upload-release-action@v2
+        with:
+          release_name: "v${{ inputs.tag }} Arctium + Hermes + Batch start script (updated ${{ steps.date.outputs.date }})"
+          tag: ${{ inputs.tag }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: releases/hermes_launcher_classic.zip
+          asset_name: "hermes_launcher_classic.zip"
+          overwrite: true
+          
+      - name: Upload TBC Launcher
+        uses: svenstaro/upload-release-action@v2
+        with:
+          release_name: "v${{ inputs.tag }} Arctium + Hermes + Batch start script (updated ${{ steps.date.outputs.date }})"
+          tag: ${{ inputs.tag }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: releases/hermes_launcher_tbc.zip
+          asset_name: "hermes_launcher_tbc.zip"
+          overwrite: true
