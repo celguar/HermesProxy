@@ -8,7 +8,7 @@ on:
       tag:
         description: 'Release Tag'
         required: true
-        default: 'v3.7'
+        default: '3.7'
         type: string
       update_release:
         description: 'Update Release'
