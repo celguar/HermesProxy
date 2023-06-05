@@ -8,7 +8,7 @@ on:
       tag:
         description: 'Release Tag'
         required: true
-        default: '3.7'
+        default: 'v3.7'
         type: string
       update_release:
         description: 'Update Release'
@@ -31,7 +31,7 @@ jobs:
         uses: dsaltares/fetch-gh-release-asset@master
         with:
           repo: WowLegacyCore/HermesProxy
-          version: tags/${{ inputs.tag }}
+          version: tags/v${{ inputs.tag }}
           file: HermesProxy-Windows-v${{ inputs.tag }}.zip
           target: HermesProxy-Windows-v${{ inputs.tag }}.zip
           token: ${{ secrets.GITHUB_TOKEN }}
