@@ -42,7 +42,7 @@ jobs:
           args: unzip -qq HermesProxy-Windows-v${{ inputs.tag }}.zip -d proxy
           
       - name: Download Classic Launcher
-        uses: dsaltares/fetch-gh-release-asset@latest
+        uses: dsaltares/fetch-gh-release-asset@master
         with:
           file: hermes_launcher_classic.zip
           target: hermes_launcher_classic.zip
