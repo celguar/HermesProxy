@@ -118,7 +118,10 @@ jobs:
           cp tbc/Hermes\ Launcher/*.bat tbc_launcher/Hermes\ Launcher
           cp -r proxy/* classic_launcher/Hermes\ Launcher/hermes_proxy
           cp -r proxy/* tbc_launcher/Hermes\ Launcher/hermes_proxy
+          sed -i 's/value=\"40618\"/value=\"42597\"/' classic_launcher/Hermes\ Launcher/hermes_proxy/HermesProxy.config
           sed -i 's/value=\"40618\"/value=\"42328\"/' tbc_launcher/Hermes\ Launcher/hermes_proxy/HermesProxy.config
+          sed -i 's/\"PacketsLog\" value=\"true\"/\"PacketsLog\" value=\"false\"/' classic_launcher/Hermes\ Launcher/hermes_proxy/HermesProxy.config
+          sed -i 's/\"PacketsLog\" value=\"true\"/\"PacketsLog\" value=\"false\"/' tbc_launcher/Hermes\ Launcher/hermes_proxy/HermesProxy.config
           
       # mv classic/proxy/CSV/* classic/launcher/Hermes Launcher/hermes_proxy/CSV/
           
@@ -192,6 +195,7 @@ jobs:
           file: releases/hermes_launcher_classic.zip
           asset_name: "hermes_launcher_classic.zip"
           overwrite: true
+          make_latest: false
           
       - name: Upload TBC Launcher
         uses: svenstaro/upload-release-action@v2
@@ -202,3 +206,4 @@ jobs:
           file: releases/hermes_launcher_tbc.zip
           asset_name: "hermes_launcher_tbc.zip"
           overwrite: true
+          make_latest: false
