@@ -42,6 +42,43 @@ namespace HermesProxy.World.Client
                 loot.Items.Add(lootItem);
             }
             SendPacketToClient(loot);
+
+            // send master loot list
+            if (loot.LootMethod == LootMethod.MasterLoot &&
+                GetSession().GameState.CurrentGroups[0] != null &&
+                GetSession().GameState.CurrentGroups[0].LootSettings.Method == LootMethod.MasterLoot &&
+                GetSession().GameState.CurrentGroups[0].LootSettings.LootMaster == GetSession().GameState.CurrentPlayerGuid &&
+                !GetSession().GameState.MasterLootPlayersListSent.Contains(loot.LootObj))
+            {
+                LootList lootList = new LootList();
+                lootList.Owner = loot.Owner;
+                lootList.LootObj = loot.LootObj;
+                lootList.Master = GetSession().GameState.CurrentPlayerGuid;
+                SendPacketToClient(lootList);
+
+                MasterLootCandidateList list = new MasterLootCandidateList();
+                list.LootObj = loot.LootObj;
+                // use the latest list sent by server
+                if (GetSession().GameState.MasterLootPlayersList.Count != 0)
+                {
+                    foreach (var guid in GetSession().GameState.MasterLootPlayersList)
+                    {
+                        list.Players.Add(guid);
+                    }
+                }
+                // use group list instead (after logout/dc)
+                else
+                {
+                    foreach (var player in GetSession().GameState.CurrentGroups[0].PlayerList)
+                    {
+                        list.Players.Add(player.GUID);
+                    }
+                }
+                SendPacketToClient(list);
+
+                // mark as sent
+                GetSession().GameState.MasterLootPlayersListSent.Add(loot.LootObj);
+            }
         }
 
         [PacketHandler(Opcode.SMSG_LOOT_RELEASE)]
@@ -193,24 +230,14 @@ namespace HermesProxy.World.Client
         [PacketHandler(Opcode.SMSG_LOOT_MASTER_LIST)]
         void HandleLootMasterList(WorldPacket packet)
         {
-            if (GetSession().GameState.LastLootTargetGuid == null)
-                return;
-
-            LootList list = new LootList();
-            list.Owner = GetSession().GameState.LastLootTargetGuid.To128(GetSession().GameState);
-            list.LootObj = GetSession().GameState.LastLootTargetGuid.ToLootGuid();
-            list.Master = GetSession().GameState.CurrentPlayerGuid;
-            SendPacketToClient(list);
-
-            MasterLootCandidateList loot = new MasterLootCandidateList();
-            loot.LootObj = GetSession().GameState.LastLootTargetGuid.ToLootGuid();
-            byte count = packet.ReadUInt8();
-            for (byte i = 0; i < count; i++)
+            // save this list for consequent loot attempts
+            GetSession().GameState.MasterLootPlayersList.Clear();
+            byte num = packet.ReadUInt8();
+            for (byte i = 0; i < num; i++)
             {
                 WowGuid128 guid = packet.ReadGuid().To128(GetSession().GameState);
-                loot.Players.Add(guid);
+                GetSession().GameState.MasterLootPlayersList.Add(guid);
             }
-            SendPacketToClient(loot);
         }
     }
 }
