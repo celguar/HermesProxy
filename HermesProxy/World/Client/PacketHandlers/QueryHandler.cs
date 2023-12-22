@@ -666,6 +666,9 @@ namespace HermesProxy.World.Client
 
         void SendItemUpdatesIfNeeded(ItemTemplate item)
         {
+            ItemRecord row;
+            bool existingItem = GameData.ItemRecordsStore.TryGetValue(item.Entry, out row);
+
             DBReply reply = GameData.GenerateItemUpdateIfNeeded(item);
             if (reply != null)
                 SendPacketToClient(reply);
@@ -681,7 +684,7 @@ namespace HermesProxy.World.Client
                     SendPacketToClient(reply);
             }
 
-            if (!GameData.ItemCanHaveModel(item))
+            if (!GameData.ItemCanHaveModel(item) || existingItem)
                 return;
 
             reply = GameData.GenerateItemAppearanceUpdateIfNeeded(item);
