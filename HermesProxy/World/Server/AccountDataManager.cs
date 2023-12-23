@@ -14,6 +14,7 @@ namespace HermesProxy.World.Server
     public class AccountMetaDataManager
     {
         private const string LAST_CHARACTER_FILE = "last_character.txt";
+        private const string CHARACTERS_ORDER_FILE = "characters_order.txt";
         private const string COMPLETED_QUESTS_FILE = "completed_quests.csv";
         private const string SETTINGS_FILE = "settings.json";
 
@@ -68,6 +69,100 @@ namespace HermesProxy.World.Server
 
             File.WriteAllText(path, $"{realmName},{charName},{charLowerGuid},{lastLoginUnixSec}", Encoding.UTF8);
             Log.Print(LogType.Debug, $"Saved last selected char in '{path}'");
+        }
+
+        public byte GetCharacterListPosition(string realmName, WowGuid128 charGuid)
+        {
+            var dir = GetAccountMetaDataDirectory();
+            var path = Path.Combine(dir, CHARACTERS_ORDER_FILE);
+
+            if (!File.Exists(path))
+                return 0;
+
+            List<string> charOrderList = File.ReadAllLines(path).ToList();
+            foreach (var entry in charOrderList)
+            {
+                var charOrderInfo = entry.Split(',');
+                string savedRealm = charOrderInfo[0];
+
+                // skip different realm (not needed?)
+                if (savedRealm != realmName)
+                    continue;
+
+                byte position = byte.Parse(charOrderInfo[1]);
+                ulong guidLow = ulong.Parse(charOrderInfo[2]);
+                if (guidLow == charGuid.Low)
+                    return position;
+            }
+            return 0;
+        }
+
+        public void SaveCharacterOrder(string realmName, Dictionary<ulong, byte> changedPositionsList, List<OwnCharacterInfo> allCharList)
+        {
+            var dir = GetAccountMetaDataDirectory();
+            var path = Path.Combine(dir, CHARACTERS_ORDER_FILE);
+            Dictionary<string, Dictionary<ulong, byte>> characterPositionsList = new Dictionary<string, Dictionary<ulong, byte>>();
+
+            // add list from file
+            if (File.Exists(path))
+            {
+                List<string> charOrderList = File.ReadAllLines(path).ToList();
+                foreach (var entry in charOrderList)
+                {
+                    var charOrderInfo = entry.Split(',');
+                    string savedRealm = charOrderInfo[0];
+                    byte position = byte.Parse(charOrderInfo[1]);
+                    ulong guidLow = ulong.Parse(charOrderInfo[2]);
+
+                    if (!characterPositionsList.ContainsKey(savedRealm))
+                    {
+                        Dictionary<ulong, byte> realmChars = new Dictionary<ulong, byte>();
+                        characterPositionsList.Add(savedRealm, realmChars);
+                    }
+
+                    if (savedRealm == realmName)
+                    {
+                        // skip non existing characters
+                        if (!allCharList.Any(own => own.CharacterGuid.Low == guidLow))
+                            continue;
+
+                        // change existing positions from file
+                        byte newPosition;
+                        if (changedPositionsList.TryGetValue(guidLow, out newPosition))
+                        {
+                            position = newPosition;
+                        }
+                    }
+
+                    if (characterPositionsList.ContainsKey(savedRealm))
+                        characterPositionsList[savedRealm][guidLow] = position;
+                }
+            }
+
+            // add new positions
+            if (!characterPositionsList.ContainsKey(realmName))
+            {
+                Dictionary<ulong, byte> realmChars = new Dictionary<ulong, byte>();
+                characterPositionsList.Add(realmName, realmChars);
+            }
+
+            foreach (var changedPos in changedPositionsList)
+            {
+                if (characterPositionsList.ContainsKey(realmName))
+                {
+                    characterPositionsList[realmName][changedPos.Key] = changedPos.Value;
+                }
+            }
+
+            File.WriteAllText(path, "");
+            foreach (var posRealm in characterPositionsList)
+            {
+                foreach (var pos in posRealm.Value)
+                {
+                    File.AppendAllLines(path, new[] { $"{posRealm.Key},{pos.Value},{pos.Key}" }, Encoding.UTF8);
+                }
+            }
+            Log.Print(LogType.Debug, $"Characters order saved in '{path}'");
         }
 
         public void InvalidateLastSelectedCharacter()

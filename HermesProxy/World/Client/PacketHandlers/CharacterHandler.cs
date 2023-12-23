@@ -89,6 +89,7 @@ namespace HermesProxy.World.Client
                 char1.ProfessionIds[0] = 0;
                 char1.ProfessionIds[1] = 0;
                 char1.LastPlayedTime = (ulong) Time.UnixTime;
+                char1.ListPosition = GetSession().AccountMetaDataMgr.GetCharacterListPosition(GetSession().Realm.Name, char1.Guid);
                 char1.SpecID = 0;
                 char1.Unknown703 = 55;
                 char1.LastLoginVersion = 11400;

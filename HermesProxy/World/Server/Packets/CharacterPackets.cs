@@ -1142,4 +1142,22 @@ namespace HermesProxy.World.Server.Packets
         public byte Result = 0;
         public WowGuid128 Guid;
     }
+
+    public class ReorderCharacters : ClientPacket
+    {
+        public ReorderCharacters(WorldPacket packet) : base(packet) { }
+
+        public override void Read()
+        {
+            var count = _worldPacket.ReadBits<uint>(9);
+            for (var i = 0; i < count; ++i)
+            {
+                WowGuid128 guid = _worldPacket.ReadPackedGuid128();
+                byte pos = _worldPacket.ReadUInt8();
+                changedPositionsList.Add(guid.Low, pos);
+            }
+        }
+
+        public Dictionary<ulong, byte> changedPositionsList = new Dictionary<ulong, byte>();
+    }
 }
