@@ -662,7 +662,6 @@ namespace HermesProxy.World.Client
             SendItemUpdatesIfNeeded(item);
             GameData.StoreItemTemplate((uint)entry.Key, item);
         }
-        [PacketHandler(Opcode.SMSG_QUERY_PET_NAME_RESPONSE)]
 
         void SendItemUpdatesIfNeeded(ItemTemplate item)
         {
@@ -695,6 +694,8 @@ namespace HermesProxy.World.Client
             if (reply != null)
                 SendPacketToClient(reply);
         }
+
+        [PacketHandler(Opcode.SMSG_QUERY_PET_NAME_RESPONSE)]
         void HandleQueryPetNameResponse(WorldPacket packet)
         {
             uint petNumber = packet.ReadUInt32();
