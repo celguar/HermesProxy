@@ -407,6 +407,14 @@ namespace HermesProxy.World.Client
                                 InspectItemData itemData = new InspectItemData();
                                 itemData.Index = i;
                                 itemData.Item.ItemID = itemId;
+                                if (updates.ContainsKey(PLAYER_VISIBLE_ITEM_1_0 + 1 + i * offset))
+                                {
+                                    uint ench = updates[PLAYER_VISIBLE_ITEM_1_0 + 1 + i * offset].UInt32Value;
+                                    InspectEnchantData enchData;
+                                    enchData.Id = ench;
+                                    enchData.Index = 0;
+                                    itemData.Enchants.Add(enchData);
+                                }
                                 inspect.DisplayInfo.Items.Add(itemData);
                             }
                         }
