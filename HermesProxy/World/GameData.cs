@@ -2,13 +2,17 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Framework;
+using Framework.IO;
 using Framework.Logging;
+using Framework.Realm;
 using HermesProxy.World.Enums;
 using HermesProxy.World.Objects;
 using Microsoft.VisualBasic.FileIO;
+using static HermesProxy.World.Server.Packets.SetupCurrency;
 
 namespace HermesProxy.World
 {
@@ -521,6 +525,7 @@ namespace HermesProxy.World
             LoadTaxiPathNodesGraph();
             LoadQuestBits();
             LoadHotfixes();
+            ParsePacketLog();
             Log.Print(LogType.Storage, "Finished loading data.");
         }
 
@@ -1651,7 +1656,155 @@ namespace HermesProxy.World
             LoadCreatureDisplayInfoExtraHotfixes();
             LoadCreatureDisplayInfoOptionHotfixes();
         }
-        
+
+        public static void ParsePacketLog()
+        {
+            var fileName = Path.Combine("CustomLogs", "realmlist.pktlog");
+            if (File.Exists(fileName))
+            {
+                using (FileStream file = File.OpenRead(fileName))
+                {
+                    using (BinaryReader reader = new BinaryReader(File.OpenRead(fileName)))
+                    {
+                        byte[] data = File.ReadAllBytes(fileName);
+                        ByteBuffer packet = new ByteBuffer(data);
+
+                        // skip beginning (TODO)
+                        packet.Skip(1082);
+
+                        RealmListPacket list = new RealmListPacket();
+                        list.Cmd = packet.ReadUInt8();
+                        list.Size = packet.ReadUInt16();
+                        list.Unusued = packet.ReadUInt32();
+                        list.RealmCount = packet.ReadUInt8();
+
+                        Log.Print(LogType.Error, $"AUTH COMMAND {list.Cmd}");
+                        Log.Print(LogType.Error, $"PACKET SIZE {list.Size}");
+                        Log.Print(LogType.Error, $"Realms: {list.RealmCount}");
+
+                        for (byte i = 0; i < list.RealmCount; ++i)
+                        {
+                            RealmInfo realm = new RealmInfo();
+                            realm.Type = packet.ReadUInt32(); Log.Print(LogType.Error, $"Type {realm.Type}");
+                            realm.Flags = packet.ReadUInt8(); Log.Print(LogType.Error, $"Flags {realm.Flags}");
+                            realm.Name = packet.ReadCString();
+
+                            // hackfix for Daggerspine - has some junk bytes in name
+                            if (realm.Name.Like("Daggerspi"))
+                            {
+                                realm.Name = "Daggerspine";
+                                packet.Skip(65);
+                            }
+                            if (realm.Name.Like("Turalyon"))
+                            {
+                                realm.Name = "Turalyon";
+                                packet.Skip(63);
+                            }
+                            Log.Print(LogType.Error, $"Name {realm.Name}");
+                            realm.Address = packet.ReadCString(); Log.Print(LogType.Error, $"Address {realm.Address}");
+                            realm.Population = packet.ReadFloat(); Log.Print(LogType.Error, $"Popu {realm.Population}");
+                            realm.CharacterCount = packet.ReadUInt8(); Log.Print(LogType.Error, $"Chars {realm.CharacterCount}");
+                            realm.Category = packet.ReadUInt8(); Log.Print(LogType.Error, $"Category {realm.Category}");
+                            realm.Region = packet.ReadUInt8(); Log.Print(LogType.Error, $"Region {realm.Region}");
+
+                            // hackfix for Darksorrow - has some junk bytes in name
+                            if (realm.Name.Like("Darksorrow"))
+                            {
+                                packet.Skip(140);
+                            }
+
+                            list.RealmList.Add(realm);
+                        }
+
+                        if (list.RealmList.Count() != 0)
+                        {
+                            uint maxFlag = 0;
+                            uint maxCategory = 0;
+                            uint maxRegion = 0;
+                            uint maxCharacters = 0;
+                            string MaxChars = "";
+                            var csv = new StringBuilder();
+                            var csvNames = new StringBuilder();
+                            var csvCombo = new StringBuilder();
+                            var parsedFile = Path.Combine("CustomLogs", "realmlistParsed.csv");
+                            var parsedFileNames = Path.Combine("CustomLogs", "realmlistParsedNames.csv");
+                            var parsedFileCombo = Path.Combine("CustomLogs", "realmlistParsedCombo.csv");
+                            var titles = string.Format("{0},{1},{2},{3},{4},{5},{6},{7}", "Name", "Type", "Flags", "Address", "Population", "Characters", "Category", "Region");
+                            csv.AppendLine(titles);
+                            csvNames.AppendLine(titles);
+                            csvCombo.AppendLine(titles);
+                            string[] RealmTypeNames = new string[] { "Normal", "PvP", "Normal2", "PvP2", "Normal3", "PvP3", "RP", "RP2", "RPPvP" };
+                            string[][] RealmZoneNames = new string[][] { new string[] { }, new string[] { "USA", "USA", "", "", "", "Oceanic" }, new string[] { "Korea", "Korea" }, new string[] { "Europe", "English", "German", "French", "", "Spanish" }, new string[] { "Taiwan", "Taiwan" }, new string[] { "China", "China", "CN3", "CN7" } };
+                            // add missing
+                            //RealmZoneNames[99] = new string[] { "TEST_SERVER", "TEST_SERVER", "OCEANIC_TEST" };
+                            //RealmZoneNames[101] = new string[] { "QA_SERVER", "QA_SERVER" };
+                            foreach (RealmInfo realm in list.RealmList)
+                            {
+                                if (realm.Flags != 1)
+                                    Log.Print(LogType.Error, $"Realm {realm.Name} FLAGS OFF");
+
+                                if (realm.Flags > maxFlag)
+                                    maxFlag = realm.Flags;
+                                if (realm.Category > maxCategory)
+                                    maxCategory = realm.Category;
+                                if (realm.Region > maxRegion)
+                                    maxRegion = realm.Region;
+                                if (realm.CharacterCount > maxCharacters)
+                                {
+                                    maxCharacters = realm.CharacterCount;
+                                    MaxChars = realm.Name;
+                                }
+
+                                // write to csv
+                                var newLine = string.Format("{0},{1},{2},{3},{4},{5},{6},{7}", realm.Name, realm.Type, realm.Flags, realm.Address, realm.Population, realm.CharacterCount, realm.Category, realm.Region);
+                                csv.AppendLine(newLine);
+
+                                string RealmCatName = "Unk";
+                                string RealmRegName = "Unk";
+                                // add known only
+                                if (realm.Region < RealmZoneNames.Length)
+                                {
+                                    RealmRegName = RealmZoneNames[realm.Region][0];
+                                    if (realm.Category < RealmZoneNames[realm.Region].Length)
+                                    {
+                                        RealmCatName = RealmZoneNames[realm.Region][realm.Category];
+                                    }
+                                }
+                                else
+                                {
+                                    // hackfix EU/US
+                                    if (realm.Region >= RealmZoneNames.Length && realm.Category < RealmZoneNames[(int)RealmRegion.EUROPE].Length)
+                                    {
+                                        RealmCatName = RealmZoneNames[(int)RealmRegion.EUROPE][realm.Category];
+                                    }
+                                }
+                                if (RealmCatName.IsEmpty())
+                                    RealmCatName = "Unk";
+                                if (RealmRegName.IsEmpty())
+                                    RealmRegName = "Unk";
+
+                                var newLineNames = string.Format("{0},{1},{2},{3},{4},{5},{6},{7}", realm.Name, RealmTypeNames[realm.Type], realm.Flags, realm.Address, realm.Population, realm.CharacterCount, RealmCatName, RealmRegName);
+                                csvNames.AppendLine(newLineNames);
+
+                                var newLineCombo = string.Format("{0},{1},{2},{3},{4},{5},{6},{7}", realm.Name, (RealmTypeNames[realm.Type] + " (" + realm.Type + ")"), realm.Flags, realm.Address, realm.Population, realm.CharacterCount, (RealmCatName + " (" + realm.Category + ")"), (RealmRegName + " (" + realm.Region + ")"));
+                                csvCombo.AppendLine(newLineCombo);
+                            }
+                            File.WriteAllText(parsedFile, csv.ToString());
+                            File.WriteAllText(parsedFileNames, csvNames.ToString());
+                            File.WriteAllText(parsedFileCombo, csvCombo.ToString());
+                            Log.Print(LogType.Error, $"Max Flags {maxFlag}");
+                            Log.Print(LogType.Error, $"Max Category {maxCategory}");
+                            Log.Print(LogType.Error, $"Max Region {maxRegion}");
+                            Log.Print(LogType.Error, $"Max Chars {maxCharacters} on realm {MaxChars}");
+
+
+                        }
+                    }
+                }
+            }
+        }
+
+
         public static void LoadAreaTriggerHotfixes()
         {
             var path = Path.Combine("CSV", "Hotfix", $"AreaTrigger{ModernVersion.ExpansionVersion}.csv");
@@ -4625,5 +4778,75 @@ namespace HermesProxy.World
         public ushort ShapeId;
         public ushort ActionSetId;
         public byte Flags;
+    }
+
+    public enum RealmTypes
+    {
+        Normal = 0,
+        PvP    = 1,
+        Normal2 = 2,
+        PvP2 = 3,
+        Normal3 = 4,
+        PvP3 = 5,
+        RP = 6,
+        RP2 = 7,
+        RPPvP = 8,
+    }
+    public enum RealmFlags
+    {
+        Online = 0,
+        Invalid = 1,
+        Offline = 2,
+        Build = 4,
+        Recommend = 32,
+        New = 64,
+        Full = 128,
+    }
+    public enum RealmCategory
+    {
+        USA = 1,
+        KOREA = 1,
+        ENGLISH = 1,
+        TAIWAN = 1,
+        CHINA = 1,
+        TEST_SERVER = 1,
+        QA_SERVER = 1,
+        GERMAN = 2,
+        CN3 = 2,
+        FRENCH = 3,
+        CN7 = 3,
+        OCEANIC = 5,
+        SPANISH = 5,
+        OCEANIC_TEST = 5,
+    }
+    public enum RealmRegion
+    {
+        USA = 1,
+        KOREA = 2,
+        EUROPE = 3,
+        TAIWAN = 4,
+        CHINA = 5,
+        TEST_SERVER = 99,
+        QA_SERVER = 101,
+    }
+    public class RealmInfo
+    {
+        public uint Type;
+        public byte Flags;
+        public string Name;
+        public string Address;
+        public float Population;
+        public byte CharacterCount;
+        public byte Category;
+        public byte Region;
+    }
+
+    public class RealmListPacket
+    {
+        public byte Cmd;
+        public ushort Size;
+        public uint Unusued;
+        public byte RealmCount;
+        public List<RealmInfo> RealmList = new List<RealmInfo>();
     }
 }
