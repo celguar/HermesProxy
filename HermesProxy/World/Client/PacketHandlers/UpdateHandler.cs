@@ -51,6 +51,7 @@ namespace HermesProxy.World.Client
                 packet.ReadBool(); // Has Transport
 
             HashSet<uint> missingItemTemplates = new HashSet<uint>();
+            HashSet<WowGuid128> missingCharacterCaches = new HashSet<WowGuid128>();
             List<AuraUpdate> auraUpdates = new List<AuraUpdate>();
             UpdateObject updateObject = new UpdateObject(GetSession().GameState);
 
@@ -128,6 +129,12 @@ namespace HermesProxy.World.Client
                             missingItemTemplates.Add((uint)updateData.ObjectData.EntryID);
                         }
 
+                        if (guid.IsPlayer() && guid != GetSession().GameState.CurrentPlayerGuid &&
+                            !GetSession().GameState.CachedPlayers.ContainsKey(guid))
+                        {
+                            missingCharacterCaches.Add(guid);
+                        }
+
                         if (updateData.CreateData.MoveInfo != null || !guid.IsWorldObject() )
                         {
                             updateObject.ObjectUpdates.Add(updateData);
@@ -158,6 +165,12 @@ namespace HermesProxy.World.Client
                            !GameData.ItemTemplates.ContainsKey((uint)updateData.ObjectData.EntryID))
                         {
                             missingItemTemplates.Add((uint)updateData.ObjectData.EntryID);
+                        }
+
+                        if (guid.IsPlayer() && guid != GetSession().GameState.CurrentPlayerGuid &&
+                            !GetSession().GameState.CachedPlayers.ContainsKey(guid))
+                        {
+                            missingCharacterCaches.Add(guid);
                         }
 
                         if (updateData.CreateData.MoveInfo != null || !guid.IsWorldObject())
@@ -195,6 +208,13 @@ namespace HermesProxy.World.Client
                 if (LegacyVersion.RemovedInVersion(ClientVersionBuild.V2_0_1_6180))
                     packet2.WriteGuid(WowGuid64.Empty);
                 SendPacketToServer(packet2);
+            }
+
+            foreach (WowGuid128 guid in missingCharacterCaches)
+            {
+                WorldPacket packet3 = new WorldPacket(Opcode.CMSG_NAME_QUERY);
+                packet3.WriteGuid(guid.To64());
+                SendPacketToServer(packet3, GetSession().GameState.IsInWorld ? Opcode.MSG_NULL_ACTION : Opcode.SMSG_LOGIN_VERIFY_WORLD);
             }
 
             int activePlayerUpdateIndex = -1;
