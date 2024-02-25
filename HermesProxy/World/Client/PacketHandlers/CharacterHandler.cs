@@ -407,13 +407,40 @@ namespace HermesProxy.World.Client
                                 InspectItemData itemData = new InspectItemData();
                                 itemData.Index = i;
                                 itemData.Item.ItemID = itemId;
-                                if (updates.ContainsKey(PLAYER_VISIBLE_ITEM_1_0 + 1 + i * offset))
+
+                                // enchants
+                                for (byte j = 0; j < 2; j++)
                                 {
-                                    uint ench = updates[PLAYER_VISIBLE_ITEM_1_0 + 1 + i * offset].UInt32Value;
-                                    InspectEnchantData enchData;
-                                    enchData.Id = ench;
-                                    enchData.Index = 0;
-                                    itemData.Enchants.Add(enchData);
+                                    if (updates.ContainsKey(PLAYER_VISIBLE_ITEM_1_0 + j + 1 + i * offset))
+                                    {
+                                        uint ench = updates[PLAYER_VISIBLE_ITEM_1_0 + j + 1 + i * offset].UInt32Value;
+                                        if (ench != 0)
+                                        {
+                                            InspectEnchantData enchData;
+                                            enchData.Id = ench;
+                                            enchData.Index = j;
+                                            itemData.Enchants.Add(enchData);
+                                        }
+                                    }
+                                }
+
+                                // gems
+                                if (LegacyVersion.AddedInVersion(ClientVersionBuild.V2_0_1_6180))
+                                {
+                                    for (byte j = 0; j < 3; j++)
+                                    {
+                                        if (updates.ContainsKey(PLAYER_VISIBLE_ITEM_1_0 + j + 3 + i * offset))
+                                        {
+                                            uint gem = updates[PLAYER_VISIBLE_ITEM_1_0 + j + 3 + i * offset].UInt32Value;
+                                            if (gem != 0)
+                                            {
+                                                ItemGemData gemData = new();
+                                                gemData.Item.ItemID = GameData.GetGemFromEnchantId(gem);
+                                                gemData.Slot = j;
+                                                itemData.Gems.Add(gemData);
+                                            }
+                                        }
+                                    }
                                 }
                                 inspect.DisplayInfo.Items.Add(itemData);
                             }
