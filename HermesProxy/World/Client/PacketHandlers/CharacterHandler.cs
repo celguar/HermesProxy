@@ -544,6 +544,7 @@ namespace HermesProxy.World.Client
                 inspect.LifetimeHighestRank = lifetimeHighestRank;
                 inspect.YesterdayHonorableKills = yesterdayHonorableKills;
                 inspect.LifetimeHonorableKills = (ushort)lifetimeHonorableKills;
+                inspect.TodayHonorableKills = todayHonorableKills;
                 SendPacketToClient(inspect);
             }
         }
@@ -578,6 +579,7 @@ namespace HermesProxy.World.Client
                 inspect.LifetimeHighestRank = lifetimeHighestRank;
                 inspect.YesterdayHonorableKills = yesterdayHonorableKills;
                 inspect.LifetimeHonorableKills = (ushort)lifetimeHonorableKills;
+                inspect.TodayHonorableKills = todayHonorableKills;
                 SendPacketToClient(inspect);
             }
         }
