@@ -34,7 +34,7 @@ namespace HermesProxy.World.Client
             // These packets don't exist in Vanilla and we must send them here.
             if (LegacyVersion.RemovedInVersion(ClientVersionBuild.V2_0_1_6180))
             {
-                GetSession().RealmSocket.SendFeatureSystemStatus();
+                GetSession().RealmSocket.SendFeatureSystemStatus(2, false);
                 GetSession().RealmSocket.SendMotd();
                 GetSession().RealmSocket.SendSetTimeZoneInformation();
                 GetSession().RealmSocket.SendSeasonInfo();
