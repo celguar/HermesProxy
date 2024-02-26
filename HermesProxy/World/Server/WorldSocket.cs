@@ -904,10 +904,10 @@ namespace HermesProxy.World.Server
             SendPacket(features);
         }
 
-        public void SendFeatureSystemStatus()
+        public void SendFeatureSystemStatus(byte complain, bool voice)
         {
             FeatureSystemStatus features = new();
-            features.ComplaintStatus = 2;
+            features.ComplaintStatus = complain;
             features.ScrollOfResurrectionRequestsRemaining = 1;
             features.ScrollOfResurrectionMaxRequestsPerDay = 1;
             features.CfgRealmID = 1;
@@ -918,7 +918,7 @@ namespace HermesProxy.World.Server
             features.KioskSessionMinutes = 30;
             features.BpayStoreProductDeliveryDelay = 180;
             features.HiddenUIClubsPresenceUpdateTimer = 60000;
-            features.VoiceEnabled = false;
+            features.VoiceEnabled = voice;
             features.BrowserEnabled = false;
 
             features.EuropaTicketSystemStatus = new EuropaTicketConfig();

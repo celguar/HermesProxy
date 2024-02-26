@@ -13,7 +13,9 @@ namespace HermesProxy.World.Client
         [PacketHandler(Opcode.SMSG_FEATURE_SYSTEM_STATUS)]
         void HandleFeatureSystemStatus(WorldPacket packet)
         {
-            GetSession().RealmSocket.SendFeatureSystemStatus();
+            byte ComplaintStatus = packet.ReadUInt8();
+            bool VoiceEnabled = packet.ReadBool();
+            GetSession().RealmSocket.SendFeatureSystemStatus(ComplaintStatus, VoiceEnabled);
         }
 
         // Handlers for SMSG opcodes coming the legacy world server
