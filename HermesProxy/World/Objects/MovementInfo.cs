@@ -119,7 +119,7 @@ namespace HermesProxy.World.Objects
                 MovementFlagTBC flags = (MovementFlagTBC)packet.ReadUInt32();
                 info.Flags = (uint)flags.CastFlags<MovementFlagWotLK>();
                 info.FlagsExtra = packet.ReadUInt8();
-                hasPitch = flags.HasAnyFlag(MovementFlagTBC.Swimming | MovementFlagTBC.Flying2);
+                hasPitch = flags.HasAnyFlag(MovementFlagTBC.Swimming | MovementFlagTBC.Flying);
             }
             else
             {
@@ -236,7 +236,7 @@ namespace HermesProxy.World.Objects
             if (LegacyVersion.AddedInVersion(ClientVersionBuild.V3_0_2_9056))
                 hasSwimPitch = flags.HasAnyFlag(MovementFlagWotLK.Swimming | MovementFlagWotLK.Flying) || info.FlagsExtra.HasAnyFlag(MovementFlagExtra.AlwaysAllowPitching);
             else if (LegacyVersion.AddedInVersion(ClientVersionBuild.V2_0_1_6180))
-                hasSwimPitch = flags.HasAnyFlag(MovementFlagTBC.Swimming | MovementFlagTBC.Flying2);
+                hasSwimPitch = flags.HasAnyFlag(MovementFlagTBC.Swimming | MovementFlagTBC.Flying);
             else
                 hasSwimPitch = flags.HasAnyFlag(MovementFlagVanilla.Swimming);
 
