@@ -32,7 +32,7 @@ namespace HermesProxy.World.Server
             WorldPacket packet = new WorldPacket(Opcode.CMSG_BATTLEFIELD_PORT);
             if (LegacyVersion.AddedInVersion(ClientVersionBuild.V2_0_1_6180))
             {
-                packet.WriteUInt8(2);
+                packet.WriteUInt8(GetSession().GameState.GetBattleFieldQueueArenaType(port.Ticket.Id));
                 packet.WriteUInt8(0);
                 packet.WriteUInt32(GetSession().GameState.GetBattleFieldQueueType(port.Ticket.Id));
                 packet.WriteUInt16(0x1F90);

@@ -257,6 +257,7 @@ namespace HermesProxy.World.Client
                 GetSession().GameState.BattleFieldQueueTimes.Remove(hdr.Ticket.Id);
             }
             GetSession().GameState.StoreBattleFieldQueueType(hdr.Ticket.Id, battlefieldListId);
+            GetSession().GameState.StoreBattleFieldQueueArenaType(hdr.Ticket.Id, hdr.ArenaTeamSize);
         }
 
         [PacketHandler(Opcode.MSG_PVP_LOG_DATA, ClientVersionBuild.Zero, ClientVersionBuild.V2_0_1_6180)]
