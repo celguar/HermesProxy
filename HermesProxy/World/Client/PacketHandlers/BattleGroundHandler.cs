@@ -327,6 +327,8 @@ namespace HermesProxy.World.Client
                 for (int i = 0; i < 2; i++)
                 {
                     pvp.ArenaTeams.Names[i] = packet.ReadCString();
+                    // hackfix to avoid crash when rated match ends
+                    pvp.ArenaTeams.Names[i] = "";
                 }
             }
 
