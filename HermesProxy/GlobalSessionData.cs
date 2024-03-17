@@ -113,6 +113,7 @@ namespace HermesProxy
         public Dictionary<uint, string> ItemTexts = new Dictionary<uint, string>();
         public Dictionary<uint, uint> BattleFieldQueueTypes = new Dictionary<uint, uint>();
         public Dictionary<uint, long> BattleFieldQueueTimes = new Dictionary<uint, long>();
+        public Dictionary<uint, byte> BattleFieldQueueArenaTypes = new Dictionary<uint, byte>();
         public Dictionary<uint, uint> DailyQuestsDone = new Dictionary<uint, uint>();
         public HashSet<WowGuid128> FlagCarrierGuids = new HashSet<WowGuid128>();
         public Dictionary<WowGuid64, ushort> ObjectSpawnCount = new Dictionary<WowGuid64, ushort>();
@@ -355,6 +356,19 @@ namespace HermesProxy
             if (BattleFieldQueueTypes.ContainsKey(queueSlot))
                 return BattleFieldQueueTypes[queueSlot];
             return 0;
+        }
+        public void StoreBattleFieldQueueArenaType(uint queueSlot, byte arenaType)
+        {
+            if (BattleFieldQueueArenaTypes.ContainsKey(queueSlot))
+                BattleFieldQueueArenaTypes[queueSlot] = arenaType;
+            else
+                BattleFieldQueueArenaTypes.Add(queueSlot, arenaType);
+        }
+        public byte GetBattleFieldQueueArenaType(uint queueSlot)
+        {
+            if (BattleFieldQueueArenaTypes.ContainsKey(queueSlot))
+                return BattleFieldQueueArenaTypes[queueSlot];
+            return 2;
         }
         public void StoreAuraDurationLeft(WowGuid128 guid, byte slot, int duration, int currentTime)
         {
