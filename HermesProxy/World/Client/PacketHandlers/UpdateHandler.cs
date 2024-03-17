@@ -1537,7 +1537,26 @@ namespace HermesProxy.World.Client
                     if (objectType == ObjectType.Unit)
                         GetSession().GameState.StoreCreatureClass(guid.GetEntry(), (Class)updateData.UnitData.ClassId);
                     else
-                        updateData.PlayerData.ArenaFaction = (byte)(GameData.IsAllianceRace((Race)updateData.UnitData.RaceId) ? 1 : 0);
+                    {
+                        // Set opposite ArenaFaction if not same group
+                        bool sameGroup = guid == GetSession().GameState.CurrentPlayerGuid;
+                        if (!sameGroup)
+                        {
+                            var bgGroup = GetSession().GameState.CurrentGroups[1];
+                            if (bgGroup != null)
+                            {
+                                foreach (var player in GetSession().GameState.CurrentGroups[1].PlayerList)
+                                {
+                                    if (guid == player.GUID)
+                                        sameGroup = true;
+                                }
+                            }
+                        }
+                        if (sameGroup)
+                            updateData.PlayerData.ArenaFaction = 0;
+                        else
+                            updateData.PlayerData.ArenaFaction = 1;
+                    }
                 }
 
                 int UNIT_FIELD_POWER1 = LegacyVersion.GetUpdateField(UnitField.UNIT_FIELD_POWER1);
