@@ -231,6 +231,10 @@ namespace HermesProxy.World.Client
                         active.ShutdownTimer = packet.ReadUInt32();
                         active.StartTimer = packet.ReadUInt32();
                         active.ArenaFaction = packet.ReadUInt8();
+
+                        // Hackfix to always send opposite arenaFaction
+                        active.ArenaFaction = 0;
+
                         if (active.ShutdownTimer == 0)
                         {
                             BattlegroundInit init = new BattlegroundInit();
