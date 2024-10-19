@@ -424,6 +424,27 @@ namespace HermesProxy.World.Client
                                     }
                                 }
 
+                                // random bonuses
+                                byte randomBonusesOffset = (byte)(LegacyVersion.AddedInVersion(ClientVersionBuild.V2_0_1_6180) ? 12 : 8);
+                                // random property
+                                if (updates.ContainsKey(PLAYER_VISIBLE_ITEM_1_0 + randomBonusesOffset + i * offset))
+                                {
+                                    uint propertyID = updates[PLAYER_VISIBLE_ITEM_1_0 + randomBonusesOffset + i * offset].UInt32Value;
+                                    if (propertyID != 0)
+                                    {
+                                        itemData.Item.RandomPropertiesID = propertyID;
+                                    }
+                                }
+                                // random seed
+                                if (updates.ContainsKey(PLAYER_VISIBLE_ITEM_1_0 + randomBonusesOffset + 1 + i * offset))
+                                {
+                                    uint suffix = updates[PLAYER_VISIBLE_ITEM_1_0 + randomBonusesOffset + 1 + i * offset].UInt32Value;
+                                    if (suffix != 0)
+                                    {
+                                        itemData.Item.RandomPropertiesSeed = suffix;
+                                    }
+                                }
+
                                 // gems
                                 if (LegacyVersion.AddedInVersion(ClientVersionBuild.V2_0_1_6180))
                                 {
