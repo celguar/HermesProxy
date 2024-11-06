@@ -598,6 +598,41 @@ namespace HermesProxy.Auth
                     realmInfo.VersonBugfix = packet.ReadUInt8();
                     realmInfo.Build = packet.ReadUInt16();
                 }
+
+                // convert population
+                bool flagSet = false;
+                if ((realmInfo.Flags & RealmFlags.Full) != 0)
+                {
+                    realmInfo.Population = 6;
+                    flagSet = true;
+                }
+                if ((realmInfo.Flags & RealmFlags.Recommended) != 0)
+                {
+                    realmInfo.Population = 5;
+                    flagSet = true;
+                }
+                if ((realmInfo.Flags & RealmFlags.New) != 0)
+                {
+                    realmInfo.Population = 4;
+                    flagSet = true;
+                }
+                
+                if (!flagSet)
+                {
+                    if (realmInfo.Population < 2)
+                    {
+                        realmInfo.Population = 0;
+                    }
+                    else if (realmInfo.Population < 6)
+                    {
+                        realmInfo.Population = 2;
+                    }
+                    else if ((realmInfo.Flags & RealmFlags.Full) == 0)
+                    {
+                        realmInfo.Population = 3;
+                    }
+                }
+
                 realmList.Add(realmInfo);
             }
 
