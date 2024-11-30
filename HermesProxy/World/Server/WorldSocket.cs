@@ -848,6 +848,7 @@ namespace HermesProxy.World.Server
             {
                 response.WaitInfo = new AuthWaitInfo();
                 response.WaitInfo.WaitCount = queuePos;
+                response.WaitInfo.WaitTime = 0;
             }
 
             SendPacket(response);
@@ -859,7 +860,7 @@ namespace HermesProxy.World.Server
             {
                 WaitQueueUpdate waitQueueUpdate = new();
                 waitQueueUpdate.WaitInfo.WaitCount = position;
-                waitQueueUpdate.WaitInfo.WaitTime = 0;
+                waitQueueUpdate.WaitInfo.WaitTime = Math.Max(1, position / 40);
                 waitQueueUpdate.WaitInfo.HasFCM = false;
                 SendPacket(waitQueueUpdate);
             }
