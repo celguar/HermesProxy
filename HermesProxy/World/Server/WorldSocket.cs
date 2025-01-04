@@ -883,7 +883,7 @@ namespace HermesProxy.World.Server
             FeatureSystemStatusGlueScreen features = new();
             features.BpayStoreAvailable = false;
             features.BpayStoreDisabledByParentalControls = false;
-            features.CharUndeleteEnabled = false;
+            features.CharUndeleteEnabled = true;
             features.BpayStoreEnabled = false;
             features.MaxCharactersPerRealm = 10;
             features.MinimumExpansionLevel = 5;

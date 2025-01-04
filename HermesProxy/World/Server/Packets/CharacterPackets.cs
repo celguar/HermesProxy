@@ -447,6 +447,59 @@ namespace HermesProxy.World.Server.Packets
         public WowGuid128 Guid; // Guid of the character to delete
     }
 
+    public class CharUndeleteCooldown : ClientPacket
+    {
+        public CharUndeleteCooldown(WorldPacket packet) : base(packet) { }
+
+        public override void Read() { }
+    }
+
+    public class CharDeleteCooldowlResponse : ServerPacket
+    {
+        public CharDeleteCooldowlResponse() : base(Opcode.SMSG_UNDELETE_COOLDOWN_STATUS_RESPONSE) { }
+
+        public override void Write()
+        {
+            _worldPacket.WriteBool(OnCooldown);
+            _worldPacket.WriteUInt32(MaxCooldown);
+            _worldPacket.WriteUInt32(CurrentCooldown);
+        }
+
+        public bool OnCooldown;
+        public uint MaxCooldown;
+        public uint CurrentCooldown;
+    }
+
+    public class CharUndeleteRequest : ClientPacket
+    {
+        public CharUndeleteRequest(WorldPacket packet) : base(packet) { }
+
+        public override void Read()
+        {
+            Token = _worldPacket.ReadUInt32();
+            Guid = _worldPacket.ReadPackedGuid128();
+        }
+
+        public uint Token = 0;
+        public WowGuid128 Guid; // Guid of the character to delete
+    }
+
+    public class CharUndeleteResponse : ServerPacket
+    {
+        public CharUndeleteResponse() : base(Opcode.SMSG_UNDELETE_CHARACTER_RESPONSE) { }
+
+        public override void Write()
+        {
+            _worldPacket.WriteUInt32(Token);
+            _worldPacket.WriteUInt32(Result);
+            _worldPacket.WritePackedGuid128(Guid);
+        }
+        
+        public byte Result;
+        public uint Token = 0;
+        public WowGuid128 Guid; // Guid of the character to delete
+    }
+
     public class DeleteChar : ServerPacket
     {
         public DeleteChar() : base(Opcode.SMSG_DELETE_CHAR) { }

@@ -21,6 +21,14 @@ namespace HermesProxy.World.Server
             SendPacketToServer(packet);
         }
 
+        [PacketHandler(Opcode.CMSG_ENUM_CHARACTERS_DELETED_BY_CLIENT)]
+        void HandleEnumCharactersDeleted(EnumCharacters charEnum)
+        {
+            WorldPacket packet = new WorldPacket(Opcode.CMSG_ENUM_CHARACTERS);
+            packet.WriteBool(true);
+            SendPacketToServer(packet);
+        }
+
         [PacketHandler(Opcode.CMSG_GET_ACCOUNT_CHARACTER_LIST)]
         void HandleGetAccountCharacterList(GetAccountCharacterListRequest request)
         {
@@ -83,6 +91,27 @@ namespace HermesProxy.World.Server
         {
             WorldPacket packet = new WorldPacket(Opcode.CMSG_CHAR_DELETE);
             packet.WriteGuid(charDelete.Guid.To64());
+            SendPacketToServer(packet);
+        }
+
+        [PacketHandler(Opcode.CMSG_GET_UNDELETE_CHARACTER_COOLDOWN_STATUS)]
+        void HandleCharUndeleteCooldownStatus(CharUndeleteCooldown charUndeleteCooldown)
+        {
+            CharDeleteCooldowlResponse response = new();
+            response.OnCooldown = false;
+            response.MaxCooldown = 60;
+            response.CurrentCooldown = 30;
+            SendPacket(response);
+        }
+
+        [PacketHandler(Opcode.CMSG_UNDELETE_CHARACTER)]
+        void HandleCharUndelete(CharUndeleteRequest charUndeleteRequest)
+        {
+            WorldPacket packet = new WorldPacket(Opcode.CMSG_CHAR_DELETE);
+            // write empty guid to avoid deleting
+            packet.WriteGuid(WowGuid64.Empty);
+            packet.WriteGuid(charUndeleteRequest.Guid.To64());
+            packet.WriteUInt32(charUndeleteRequest.Token);
             SendPacketToServer(packet);
         }
 

@@ -127,6 +127,11 @@ namespace HermesProxy.World.Client
                 charEnum.RaceUnlockData.Add(new EnumCharactersResult.RaceUnlock(10, true, false, false));
                 charEnum.RaceUnlockData.Add(new EnumCharactersResult.RaceUnlock(11, true, false, false));
             }
+
+            // Deleted characters
+            if (packet.CanRead())
+                charEnum.IsDeletedCharacters = packet.ReadBool();
+
             SendPacketToClient(charEnum);
         }
 
@@ -145,6 +150,17 @@ namespace HermesProxy.World.Client
         void HandleDeleteChar(WorldPacket packet)
         {
             byte result = packet.ReadUInt8();
+
+            // Undelete character
+            if (packet.CanRead())
+            {
+                CharUndeleteResponse response = new CharUndeleteResponse();
+                response.Token = packet.ReadUInt32();
+                response.Result = packet.ReadUInt8();
+                response.Guid = packet.ReadGuid().To128(GetSession().GameState);
+                SendPacketToClient(response);
+                return;
+            }
 
             DeleteChar deleteChar = new DeleteChar();
             deleteChar.Code = ModernVersion.ConvertResponseCodesValue(result);
