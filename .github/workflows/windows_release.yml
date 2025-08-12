@@ -60,7 +60,7 @@ jobs:
           if-no-files-found: error
           
   add_launcher:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
     needs: build
@@ -159,7 +159,7 @@ jobs:
 
   upload:
     if: ${{ inputs.update_release }} == true
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
     needs: add_launcher
