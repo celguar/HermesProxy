@@ -559,6 +559,12 @@ namespace HermesProxy.World.Client
                 update.HasControl = false;
                 SendPacketToClient(update);
 
+                if (!hasCatmullRom && moveSpline.EndPosition != Vector3.Zero)
+                    moveSpline.SplinePoints.Add(moveSpline.EndPosition);
+            }
+            
+            if (hasTaxiFlightFlags)
+            {
                 moveSpline.SplineFlags = SplineFlagModern.Flying |
                                          SplineFlagModern.CatmullRom |
                                          SplineFlagModern.CanSwim |
@@ -566,9 +572,6 @@ namespace HermesProxy.World.Client
                                          SplineFlagModern.Unknown5 |
                                          SplineFlagModern.Steering |
                                          SplineFlagModern.Unknown10;
-
-                if (!hasCatmullRom && moveSpline.EndPosition != Vector3.Zero)
-                    moveSpline.SplinePoints.Add(moveSpline.EndPosition);
             }
 
             MonsterMove monsterMove = new MonsterMove(guid, moveSpline);
