@@ -1787,6 +1787,11 @@ namespace HermesProxy.World.Client
                 if (UNIT_FIELD_PETNUMBER >= 0 && updateMaskArray[UNIT_FIELD_PETNUMBER])
                 {
                     updateData.UnitData.PetNumber = updates[UNIT_FIELD_PETNUMBER].UInt32Value;
+                    
+                    if (guid.GetHighType() == HighGuidType.Pet)
+                    {
+                        GetSession().GameState.CachedPets[(uint)updateData.UnitData.PetNumber] = guid;
+                    }
                 }
                 int UNIT_FIELD_PET_NAME_TIMESTAMP = LegacyVersion.GetUpdateField(UnitField.UNIT_FIELD_PET_NAME_TIMESTAMP);
                 if (UNIT_FIELD_PET_NAME_TIMESTAMP >= 0 && updateMaskArray[UNIT_FIELD_PET_NAME_TIMESTAMP])

@@ -96,6 +96,7 @@ namespace HermesProxy
         public Dictionary<WowGuid128, Dictionary<byte, int>> UnitAuraDurationFull = new();
         public Dictionary<WowGuid128, Dictionary<byte, WowGuid128>> UnitAuraCaster = new();
         public Dictionary<WowGuid128, PlayerCache> CachedPlayers = new();
+        public Dictionary<uint, WowGuid128> CachedPets = new();
         public HashSet<WowGuid128> IgnoredPlayers = new();
         public Dictionary<WowGuid128, uint> PlayerGuildIds = new();
         public System.Threading.Mutex ObjectCacheMutex = new System.Threading.Mutex();
@@ -559,6 +560,9 @@ namespace HermesProxy
         }
         public WowGuid128 GetPetGuidByNumber(uint petNumber)
         {
+            if (CachedPets.ContainsKey(petNumber))
+                return CachedPets[petNumber];
+            
             ObjectCacheMutex.WaitOne();
             foreach (var itr in ObjectCacheModern)
             {
