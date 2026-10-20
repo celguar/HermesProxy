@@ -41,6 +41,10 @@ namespace HermesProxy.World.Server
         [PacketHandler(Opcode.CMSG_LOOT_MONEY)]
         void HandleLootMoney(LootMoney loot)
         {
+            if (LegacyVersion.RemovedInVersion(ClientVersionBuild.V3_0_2_9056) &&
+                GetSession().GameState.GetCurrentGroup() == null)
+                GetSession().GameState.LastSoloLootMoney = GetSession().GameState.GetLegacyFieldValueUInt32(GetSession().GameState.CurrentPlayerGuid, PlayerField.PLAYER_FIELD_COINAGE);
+            
             WorldPacket packet = new WorldPacket(Opcode.CMSG_LOOT_MONEY);
             SendPacketToServer(packet);
         }

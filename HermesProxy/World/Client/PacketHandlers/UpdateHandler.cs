@@ -2437,6 +2437,24 @@ namespace HermesProxy.World.Client
                 if (PLAYER_FIELD_COINAGE >= 0 && updateMaskArray[PLAYER_FIELD_COINAGE])
                 {
                     updateData.ActivePlayerData.Coinage = updates[PLAYER_FIELD_COINAGE].UInt32Value;
+                    
+                    if (LegacyVersion.RemovedInVersion(ClientVersionBuild.V3_0_2_9056) &&
+                        GetSession().GameState.LastSoloLootMoney != null )
+                    {
+                        if (GetSession().GameState.GetCurrentGroup() == null)
+                        {
+                            uint oldMoney = (uint)GetSession().GameState.LastSoloLootMoney;
+                            if (oldMoney < updates[PLAYER_FIELD_COINAGE].UInt32Value)
+                            {
+                                LootMoneyNotify loot = new();
+                                loot.Money = updates[PLAYER_FIELD_COINAGE].UInt32Value - oldMoney;
+                                loot.SoleLooter = true;
+                                SendPacketToClient(loot);
+                            }
+                        }
+
+                        GetSession().GameState.LastSoloLootMoney = null;
+                    }
                 }
                 int PLAYER_FIELD_POSSTAT0 = LegacyVersion.GetUpdateField(PlayerField.PLAYER_FIELD_POSSTAT0);
                 if (PLAYER_FIELD_POSSTAT0 >= 0)
