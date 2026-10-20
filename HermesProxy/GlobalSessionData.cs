@@ -118,6 +118,7 @@ namespace HermesProxy
         public Dictionary<uint, byte> BattleFieldQueueArenaTypes = new Dictionary<uint, byte>();
         public Dictionary<uint, uint> DailyQuestsDone = new Dictionary<uint, uint>();
         public HashSet<WowGuid128> FlagCarrierGuids = new HashSet<WowGuid128>();
+        public HashSet<WowGuid128> ForcedStealthAnimUnits = new HashSet<WowGuid128>(); // units we've pinned to the StealthStand (crouch) idle animation via UNIT_FIELD_STATE_ANIM_ID because the modern 1.14 client won't select it from the creep flag; tracked so we only clear the state anim on units we actually set it on
         public Dictionary<WowGuid64, ushort> ObjectSpawnCount = new Dictionary<WowGuid64, ushort>();
         public HashSet<WowGuid64> DespawnedGameObjects = new();
         public HashSet<WowGuid128> HunterPetGuids = new HashSet<WowGuid128>();

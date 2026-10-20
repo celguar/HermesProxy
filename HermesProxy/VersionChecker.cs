@@ -940,6 +940,11 @@ namespace HermesProxy
                     activeFlags |= 2;
                 if (oldFlags.HasAnyFlag(AuraFlagsVanilla.EffectIndex2))
                     activeFlags |= 4;
+
+                // Fallback: some toggle auras arrive with no effect-index bits set. Keep effect 0
+                // active so the client still recognises the aura as live.
+                if (activeFlags == 0)
+                    activeFlags = 1;
             }
             else if (LegacyVersion.RemovedInVersion(ClientVersionBuild.V3_0_2_9056))
             {

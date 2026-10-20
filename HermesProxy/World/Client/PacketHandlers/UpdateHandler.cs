@@ -1782,6 +1782,29 @@ namespace HermesProxy.World.Client
                         updateData.UnitData.ShapeshiftForm = (byte)((updates[UNIT_FIELD_BYTES_1].UInt32Value >> 16) & 0xFF);
                         updateData.UnitData.VisFlags = (byte)((updates[UNIT_FIELD_BYTES_1].UInt32Value >> 24) & 0xFF);
                     }
+
+                    // Force the idle stealth-crouch. The 1.14 client plays StealthWalk (moving) from
+                    // the creep state but never selects StealthStand when idle, so pin the unit's
+                    // state animation to StealthStand (AnimationData id 120) while the creep vis flag
+                    // (0x02) is set; movement still overrides it with StealthWalk. Only clear units we
+                    // actually pinned (tracked in ForcedStealthAnimUnits) so we don't blanket-write a
+                    // state anim onto every unit in the world. NPCs release from 0 (Stand), but the
+                    // local player's own client ignores 0, so it needs the "no state animation"
+                    // sentinel (0xFFFFFFFF) instead.
+                    if (updateData.UnitData.VisFlags != null)
+                    {
+                        var forced = GetSession().GameState.ForcedStealthAnimUnits;
+                        if (((byte)updateData.UnitData.VisFlags & 0x02) != 0)
+                        {
+                            updateData.UnitData.StateAnimID = 120u;
+                            forced.Add(guid);
+                        }
+                        else if (forced.Remove(guid))
+                        {
+                            updateData.UnitData.StateAnimID =
+                                (guid == GetSession().GameState.CurrentPlayerGuid) ? 0xFFFFFFFFu : 0u;
+                        }
+                    }
                 }
                 int UNIT_FIELD_PETNUMBER = LegacyVersion.GetUpdateField(UnitField.UNIT_FIELD_PETNUMBER);
                 if (UNIT_FIELD_PETNUMBER >= 0 && updateMaskArray[UNIT_FIELD_PETNUMBER])
