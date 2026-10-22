@@ -509,3 +509,4 @@ FodyWeavers.xsd
 .idea/
 *.DotSettings
 debug.*.cs
+/.vscode
