@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -47,6 +47,16 @@ namespace HermesProxy.World
         public static Dictionary<uint, TaxiPath> TaxiPaths = new Dictionary<uint, TaxiPath>();
         public static int[,] TaxiNodesGraph = new int[250,250];
         public static Dictionary<uint /*questId*/, uint /*questBit*/> QuestBits = new Dictionary<uint, uint>();
+
+        // From CSV - Talent data (TBC Classic)
+        // class_id -> [tabpage0_id, tabpage1_id, tabpage2_id]
+        public static Dictionary<uint, uint[]> ClassToTalentTabs = new Dictionary<uint, uint[]>();
+        // talentTabId -> list of talents sorted by (TierID, ColumnIndex, ID)
+        public static Dictionary<uint, List<TalentEntry>> TabToTalents = new Dictionary<uint, List<TalentEntry>>();
+        // talentId -> TalentEntry
+        public static Dictionary<uint, TalentEntry> TalentById = new Dictionary<uint, TalentEntry>();
+        // class_id -> total max ranks for that class
+        public static Dictionary<uint, uint> ClassToTotalMaxRanks = new Dictionary<uint, uint>();
 
         // From Server
         public static Dictionary<uint, ItemTemplate> ItemTemplates = new Dictionary<uint, ItemTemplate>();
@@ -517,6 +527,7 @@ namespace HermesProxy.World
             LoadMeleeSpells();
             LoadAutoRepeatSpells();
             LoadAuraSpells();
+            LoadTalents();
             LoadTaxiPaths();
             LoadTaxiPathNodesGraph();
             LoadQuestBits();
@@ -1429,6 +1440,287 @@ namespace HermesProxy.World
                 }
             }
         }
+
+        // ===== TBC Classic Talent Data =====
+
+        public class TalentEntry
+        {
+            public uint ID;
+            public int TierID;
+            public int ColumnIndex;
+            public int MaxRank;
+            public uint TabID;
+            public uint ClassID;
+            public uint SpellID;
+            // MaxRankFromOG is the max rank from the original DBC (Talent1_original.csv)
+            // This is used for position mapping because CMaNGOS uses the original DBC.
+            public int MaxRankFromOG;
+        }
+
+        public static void LoadTalents()
+        {
+            // Load TalentTab1.csv to build class -> tab mapping
+            var tabPath = Path.Combine("CSV", "TalentTab1.csv");
+            if (!System.IO.File.Exists(tabPath))
+                return;
+
+            using (var csvParser = new TextFieldParser(tabPath))
+            {
+                csvParser.CommentTokens = new string[] { "#" };
+                csvParser.SetDelimiters(new string[] { "," });
+                csvParser.HasFieldsEnclosedInQuotes = true;
+                csvParser.ReadLine(); // skip header
+
+                while (!csvParser.EndOfData)
+                {
+                    var fields = csvParser.ReadFields();
+                    uint tabId = UInt32.Parse(fields[0]);
+                    int orderIndex = Int32.Parse(fields[3]);
+                    uint classMask = UInt32.Parse(fields[5]);
+
+                    // For each class bit set in the mask, record this tab
+                    for (int cls = 1; cls <= 12; cls++)
+                    {
+                        uint bit = 1u << (cls - 1);
+                        if ((classMask & bit) != 0)
+                        {
+                            uint clsKey = (uint)cls;
+                            if (!ClassToTalentTabs.ContainsKey(clsKey))
+                                ClassToTalentTabs[clsKey] = new uint[3];
+                            ClassToTalentTabs[clsKey][(uint)orderIndex] = tabId;
+                        }
+                    }
+                }
+            }
+
+            // Load Talent1.csv to build per-tab talent lists
+            var talentPath = Path.Combine("CSV", "Talent1.csv");
+            if (!System.IO.File.Exists(talentPath))
+                return;
+
+            // First, load original DBC max_ranks for position mapping
+            // CMaNGOS uses the original DBC for position mapping, so we need these values.
+            var ogTalentPath = Path.Combine("CSV", "Talent1_original.csv");
+            var ogMaxRanks = new Dictionary<uint, int>();
+            if (System.IO.File.Exists(ogTalentPath))
+            {
+                using (var csvParser = new TextFieldParser(ogTalentPath))
+                {
+                    csvParser.CommentTokens = new string[] { "#" };
+                    csvParser.SetDelimiters(new string[] { "," });
+                    csvParser.HasFieldsEnclosedInQuotes = true;  // Original DBC CSV has quoted fields
+                    csvParser.ReadLine(); // skip header
+
+                    while (!csvParser.EndOfData)
+                    {
+                        var fields = csvParser.ReadFields();
+                        uint id = UInt32.Parse(fields[0]);
+                        int maxRank = 0;
+                        // Original DBC columns: ID(0), TabID(1), TierID(2), ColumnIndex(3),
+                        // SpellRank_1(4)..SpellRank_9(12), PrereqTalent_1(13)...
+                        for (int i = 0; i < 9; i++)
+                        {
+                            string sr = fields[4 + i];
+                            if (!string.IsNullOrEmpty(sr) && sr != "0")
+                                maxRank = i + 1;
+                        }
+                        if (maxRank > 0)
+                            ogMaxRanks[id] = maxRank;
+                    }
+                }
+            }
+
+            var allTalents = new List<TalentEntry>();
+            using (var csvParser = new TextFieldParser(talentPath))
+            {
+                csvParser.CommentTokens = new string[] { "#" };
+                csvParser.SetDelimiters(new string[] { "," });
+                csvParser.HasFieldsEnclosedInQuotes = false;
+                csvParser.ReadLine(); // skip header
+
+                while (!csvParser.EndOfData)
+                {
+                    var fields = csvParser.ReadFields();
+                    uint id = UInt32.Parse(fields[0]);
+                    int tier = Int32.Parse(fields[2]);
+                    int col = Int32.Parse(fields[4]);
+                    uint tabId = UInt32.Parse(fields[5]);
+                    uint classId = UInt32.Parse(fields[6]);
+                    uint spellId = UInt32.Parse(fields[8]);
+
+                    // Count max rank from SpellRank_1(4)..SpellRank_9(12)
+                    int maxRank = 0;
+                    for (int i = 0; i < 9; i++)
+                    {
+                        string sr = fields[4 + i];
+                        if (!string.IsNullOrEmpty(sr) && sr != "0")
+                            maxRank = i + 1;
+                    }
+
+                    var entry = new TalentEntry
+                    {
+                        ID = id,
+                        TierID = tier,
+                        ColumnIndex = col,
+                        MaxRank = maxRank,
+                        TabID = tabId,
+                        ClassID = classId,
+                        SpellID = spellId,
+                        MaxRankFromOG = ogMaxRanks.ContainsKey(id) ? ogMaxRanks[id] : maxRank
+                    };
+                    TalentById[id] = entry;
+                    allTalents.Add(entry);
+                }
+            }
+
+            // Build per-tab talent lists sorted by (TierID, ColumnIndex, ID)
+            foreach (var tabId in allTalents.Select(t => t.TabID).Distinct())
+            {
+                var tabTalents = allTalents
+                    .Where(t => t.TabID == tabId)
+                    .OrderBy(t => t.TierID)
+                    .ThenBy(t => t.ColumnIndex)
+                    .ThenBy(t => t.ID)
+                    .ToList();
+                TabToTalents[tabId] = tabTalents;
+            }
+
+            // Compute total max ranks per class using ORIGINAL DBC (Talent1_original.csv)
+            // The original DBC has the correct max_ranks that CMaNGOS uses for position mapping.
+            // The new CSV (Talent1.csv) has different max_ranks and should NOT be used for byte count.
+            if (ogMaxRanks.Count > 0)
+            {
+                foreach (var kvp in ClassToTalentTabs)
+                {
+                    uint clsId = kvp.Key;
+                    uint[] tabs = kvp.Value;
+                    uint total = 0;
+                    foreach (var tabId in tabs)
+                    {
+                        foreach (var entry in allTalents)
+                        {
+                            if (entry.TabID == tabId && ogMaxRanks.ContainsKey(entry.ID))
+                            {
+                                total += (uint)ogMaxRanks[entry.ID];
+                            }
+                        }
+                    }
+                    ClassToTotalMaxRanks[clsId] = total;
+                }
+            }
+            else
+            {
+                // Fallback to new CSV if original DBC is not available
+                foreach (var kvp in ClassToTalentTabs)
+                {
+                    uint clsId = kvp.Key;
+                    uint[] tabs = kvp.Value;
+                    uint total = 0;
+                    foreach (var tabId in tabs)
+                    {
+                        if (TabToTalents.ContainsKey(tabId))
+                        {
+                            total += (uint)TabToTalents[tabId].Sum(t => t.MaxRank);
+                        }
+                    }
+                    ClassToTotalMaxRanks[clsId] = total;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Convert CMaNGOS 7-bit packed talent bytes to TBC Classic raw bit array format.
+        /// CMaNGOS uses 7-bit packing: position p maps to byte (p/7)*8 + (p%7), bit ((p/7)*8 + (p%7))%8
+        /// The new TBC Classic format uses a raw bit array: bit at position p = byte p/8, bit p%8
+        /// </summary>
+        /// <param name="classId">Player class ID (1=Warrior, 7=Shaman, etc.)</param>
+        /// <param name="legacyBytes">Raw bytes from CMaNGOS SMSG_INSPECT_TALENT (61 bytes)</param>
+        /// <returns>Byte array in TBC Classic raw bit array format</returns>
+        public static byte[] ConvertTalentsToTBCClassicFormat(uint classId, byte[] legacyBytes)
+        {
+            if (!ClassToTotalMaxRanks.ContainsKey(classId))
+            {
+                // Fallback: return raw bytes if we don't have talent data
+                return legacyBytes;
+            }
+
+            uint totalMaxRanks = ClassToTotalMaxRanks[classId];
+            uint[] tabs = ClassToTalentTabs[classId];
+            int byteSize = (int)((totalMaxRanks + 7) / 8);
+            byte[] result = new byte[byteSize];
+
+            // Build the CMaNGOS position -> raw position mapping
+            // CMaNGOS assigns positions per-tab, sorted by (TierID, ColumnIndex, ID)
+            // Position p in CMaNGOS maps to bit at: byte_idx = ((p / 7) * 8 + (p % 7)) / 8, bit = ((p / 7) * 8 + (p % 7)) % 8
+            // In the new format: bit at position p maps to byte p/8, bit p%8
+            // We need to: for each talent, check if its rank bits are set in CMaNGOS format,
+            // then set the corresponding bits in the new format
+
+            // First, build a mapping from CMaNGOS position to talent info
+            // For each talent, we know its base position and max rank in CMaNGOS format
+            // We check which ranks are learned by examining the CMaNGOS bytes
+
+            // Build CMaNGOS position -> talent mapping per tab
+            // IMPORTANT: CMaNGOS uses GLOBAL positions across all 3 class tabs, computed
+            // using the ORIGINAL DBC max_ranks (not the new CSV).
+            // talentTabPos accumulates across tabs, same as in CMaNGOS source code.
+            var talentPositions = new List<(uint talentId, int basePos, int maxRank)>();
+            int globalPos = 0;
+            foreach (var tabId in tabs)
+            {
+                if (!TabToTalents.ContainsKey(tabId))
+                    continue;
+                int tabPos = 0;
+                foreach (var talent in TabToTalents[tabId])
+                {
+                    // Use MaxRankFromOG for position calculation (CMaNGOS uses original DBC)
+                    int ogMaxRank = talent.MaxRankFromOG > 0 ? talent.MaxRankFromOG : talent.MaxRank;
+                    // basePos is the GLOBAL position (accumulated across tabs)
+                    talentPositions.Add((talent.ID, globalPos + tabPos, ogMaxRank));
+                    tabPos += ogMaxRank;
+                }
+                globalPos += tabPos;
+            }
+
+            // Decode CMaNGOS bytes to find which talents have which ranks
+            // CMaNGOS format: for position p, the bit is at:
+            //   slot = (p / 7) * 8 + (p % 7)
+            //   byteIdx = slot / 8
+            //   bitIdx = slot % 8
+            // We check if the bit is set for each rank of each talent
+            for (int i = 0; i < talentPositions.Count; i++)
+            {
+                var (talentId, basePos, maxRank) = talentPositions[i];
+                int learnedRank = 0;
+                for (int r = maxRank; r >= 1; r--)
+                {
+                    int rankPos = basePos + r - 1;
+                    int slot = (rankPos / 7) * 8 + (rankPos % 7);
+                    int byteIdx = slot / 8;
+                    int bitIdx = slot % 8;
+                    if (byteIdx < legacyBytes.Length && (legacyBytes[byteIdx] & (1 << bitIdx)) != 0)
+                    {
+                        learnedRank = r;
+                        break;
+                    }
+                }
+
+                // Set the corresponding bit in the new format for the learned rank
+                if (learnedRank > 0)
+                {
+                    int rawBitPos = basePos + learnedRank - 1;
+                    int resultByteIdx = rawBitPos / 8;
+                    int resultBitIdx = rawBitPos % 8;
+                    if (resultByteIdx < byteSize)
+                    {
+                        result[resultByteIdx] |= (byte)(1 << resultBitIdx);
+                    }
+                }
+            }
+
+            return result;
+        }
+
         public static void LoadTaxiPaths()
         {
             var path = Path.Combine("CSV", $"TaxiPath{ModernVersion.ExpansionVersion}.csv");
