@@ -500,15 +500,33 @@ namespace HermesProxy.World.Client
                 }
             }
 
-            // TODO: format seems to be different in new client
+            // Handle TBC Classic talent inspect format conversion
             if (packet.GetUniversalOpcode(false) == Opcode.SMSG_INSPECT_TALENT)
             {
                 uint talentsCount = packet.ReadUInt32();
+                byte[] legacyBytes = new byte[talentsCount];
                 for (uint i = 0; i < talentsCount; i++)
                 {
-                    byte talent = packet.ReadUInt8();
-                    if (i < 25)
-                        inspect.Talents.Add(talent);
+                    legacyBytes[i] = packet.ReadUInt8();
+                }
+
+                // Convert CMaNGOS 7-bit packed talent bytes to TBC Classic raw bit array format
+                // Get the class ID from the cached player data
+                uint classId = 0;
+                if (cache != null)
+                    classId = (uint)cache.ClassId;
+
+                if (classId > 0)
+                {
+                    byte[] converted = GameData.ConvertTalentsToTBCClassicFormat(classId, legacyBytes);
+                    foreach (byte b in converted)
+                        inspect.Talents.Add(b);
+                }
+                else
+                {
+                    // Fallback: use raw bytes (shouldn't happen in normal flow)
+                    foreach (byte b in legacyBytes)
+                        inspect.Talents.Add(b);
                 }
             }
 
