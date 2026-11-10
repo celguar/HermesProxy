@@ -26,10 +26,12 @@ namespace HermesProxy.World
             { HighGuidTypeLegacy.Group, HighGuidType.RaidGroup },
             { HighGuidTypeLegacy.Group2, HighGuidType.RaidGroup },
             { HighGuidTypeLegacy.MOTransport, HighGuidType.MOTransport }, // ?? unused in wpp
+            { HighGuidTypeLegacy.MOTransportVanilla, HighGuidType.MOTransport },
             { HighGuidTypeLegacy.Item, HighGuidType.Item },
             { HighGuidTypeLegacy.DynamicObject, HighGuidType.DynamicObject },
             { HighGuidTypeLegacy.GameObject, HighGuidType.GameObject },
             { HighGuidTypeLegacy.Transport, HighGuidType.Transport },
+            { HighGuidTypeLegacy.TransportVanilla, HighGuidType.Transport },
             { HighGuidTypeLegacy.Creature, HighGuidType.Creature },
             { HighGuidTypeLegacy.Pet, HighGuidType.Pet },
             { HighGuidTypeLegacy.Vehicle, HighGuidType.Vehicle },

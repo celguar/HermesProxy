@@ -1112,6 +1112,7 @@ namespace HermesProxy.World.Server
                 if (packetType == null)
                     return;
 
+                packet.GameState = session.GetSession().GameState;
                 using var clientPacket = (ClientPacket)Activator.CreateInstance(packetType, packet);
                 clientPacket.LogPacket(ref session.GetSession().ModernSniff);
                 clientPacket.Read();

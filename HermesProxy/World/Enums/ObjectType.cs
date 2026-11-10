@@ -140,12 +140,14 @@ namespace HermesProxy.World.Enums
         Player                  = 0x0000,                       // blizz 0000
         GameObject              = 0xF110,                       // blizz F110
         Transport               = 0xF120,                       // blizz F120 (for GAMEOBJECT_TYPE_TRANSPORT)
+        TransportVanilla        = 0x6000,
         Creature                = 0xF130,                       // blizz F130
         Pet                     = 0xF140,                       // blizz F140
         Vehicle                 = 0xF150,                       // blizz F15/F55
         DynamicObject           = 0xF100,                       // blizz F100
         Corpse                  = 0xF101,                       // blizz F100
         MOTransport             = 0x1FC0,                       // blizz 1FC0 (for GAMEOBJECT_TYPE_MO_TRANSPORT)
+        MOTransportVanilla      = 0x8000,
         Group                   = 0x1F50,                       // blizz 1F5x
         Group2                  = 0x5000,                       // for outdated tbc cores
     }

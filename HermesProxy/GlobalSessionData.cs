@@ -4,6 +4,8 @@ using HermesProxy.World.Client;
 using HermesProxy.World.Enums;
 using HermesProxy.World.Objects;
 using HermesProxy.World.Server;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -44,6 +46,8 @@ namespace HermesProxy
 
     public class GameSessionData
     {
+        private readonly ConcurrentDictionary<WowGuid128, WowGuid64> _legacyTransportGuids = new();
+
         public bool HasWsgHordeFlagCarrier;
         public bool HasWsgAllyFlagCarrier;
         public bool ChannelDisplayList;
@@ -141,6 +145,30 @@ namespace HermesProxy
             var self = new GameSessionData();
             self.CurrentPlayerStorage = new CurrentPlayerStorage(globalSession);
             return self;
+        }
+
+        internal WowGuid128 GetModernTransportGuid(WowGuid64 legacyGuid)
+        {
+            // Legacy counters can exceed the 20-bit transport counter in the modern GUID.
+            ulong firstCounter = legacyGuid.GetCounter() & WowGuid128.TransportCounterMask;
+            ulong counter = firstCounter;
+            do
+            {
+                var modernGuid = WowGuid128.TransportCreate(counter, legacyGuid);
+                if (_legacyTransportGuids.GetOrAdd(modernGuid, legacyGuid) == legacyGuid)
+                    return modernGuid;
+
+                counter = (counter + 1) & WowGuid128.TransportCounterMask;
+            }
+            while (counter != firstCounter);
+
+            throw new InvalidOperationException("No free modern transport GUID for " + legacyGuid);
+        }
+
+        internal WowGuid64 GetLegacyTransportGuid(WowGuid128 modernGuid)
+        {
+            _legacyTransportGuids.TryGetValue(modernGuid, out var legacyGuid);
+            return legacyGuid;
         }
         
         public uint GetCurrentGroupSize()

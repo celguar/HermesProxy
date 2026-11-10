@@ -136,6 +136,8 @@ namespace HermesProxy.World
 
     public class WorldPacket : ByteBuffer
     {
+        internal GameSessionData GameState { private get; set; }
+
         public WorldPacket(uint opcode = 0)
         {
             this.opcode = opcode;
@@ -185,7 +187,10 @@ namespace HermesProxy.World
             var loLength = ReadUInt8();
             var hiLength = ReadUInt8();
             var low = ReadPackedUInt64(loLength);
-            return new WowGuid128(ReadPackedUInt64(hiLength), low);
+            var guid = new WowGuid128(ReadPackedUInt64(hiLength), low);
+            if (guid.IsTransport())
+                guid.LegacyTransportGuid = GameState?.GetLegacyTransportGuid(guid);
+            return guid;
         }
 
         private ulong ReadPackedUInt64(byte length)
