@@ -158,6 +158,9 @@ namespace HermesProxy.World
 
     public class WowGuid128 : WowGuid
     {
+        internal const ulong TransportCounterMask = 0xFFFFF;
+        internal WowGuid64 LegacyTransportGuid { get; set; }
+
         private const ulong UNKNOWN_TMP_GUID_START = 10_000_000_000;
         private static ulong _nextUnknownTmpGuid = UNKNOWN_TMP_GUID_START;
 
@@ -186,7 +189,7 @@ namespace HermesProxy.World
                     return Create(HighGuidType703.Item, guid.GetCounter());
                 case HighGuidType.Transport:
                 case HighGuidType.MOTransport:
-                    return TransportCreate(guid.GetCounter(), guid.GetEntry());
+                    return gamestate.GetModernTransportGuid(guid);
                 case HighGuidType.RaidGroup:
                     return Create(HighGuidType703.RaidGroup, guid.GetCounter());
                 case HighGuidType.GameObject:
@@ -263,9 +266,12 @@ namespace HermesProxy.World
         {
             return new WowGuid128((ulong)type << 58, counter);
         }
-        static WowGuid128 TransportCreate(ulong counter, uint entry)
+        internal static WowGuid128 TransportCreate(ulong counter, WowGuid64 legacyGuid)
         {
-            return new WowGuid128((ulong)HighGuidType703.Transport << 58 | (counter << 38) | entry, 0);
+            return new WowGuid128((ulong)HighGuidType703.Transport << 58 | (counter << 38) | legacyGuid.GetEntry(), 0)
+            {
+                LegacyTransportGuid = legacyGuid
+            };
         }
         static WowGuid128 RealmSpecificCreate(HighGuidType703 type, ulong counter)
         {
@@ -326,7 +332,7 @@ namespace HermesProxy.World
         public override ulong GetCounter()
         {
             if (GetHighType() == HighGuidType.Transport)
-                return (High >> 38) & 0xFFFFF;
+                return (High >> 38) & TransportCounterMask;
             else
                 return Low & 0xFFFFFFFFFF; // CreationBits
         }
@@ -391,6 +397,8 @@ namespace HermesProxy.World
                 case HighGuidType.Item:
                     return new WowGuid64(HighGuidTypeLegacy.Item, (uint)guid.GetCounter());
                 case HighGuidType.Transport:
+                    if (guid.LegacyTransportGuid != null)
+                        return guid.LegacyTransportGuid;
                     if (guid.GetEntry() != 0)
                         return new WowGuid64(HighGuidTypeLegacy.Transport, guid.GetEntry(), (uint)guid.GetCounter());
                     else
