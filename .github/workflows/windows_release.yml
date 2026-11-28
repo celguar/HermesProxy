@@ -58,7 +58,47 @@ jobs:
           path: publish/*
           #path: hermes_proxy_${{ github.sha }}.zip
           if-no-files-found: error
-          
+
+  linux_build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository content
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET Core SDK
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install dependencies
+        run: dotnet restore
+
+      - name: Publish
+        run: dotnet publish --configuration Release --use-current-runtime -p:UsePublishBuildSettings=true
+
+      - name: Copy files
+        run: cp -r ./HermesProxy/bin/Release/*/publish/ publish
+
+      - name: Remove symbols
+        run: rm -f publish/*.pdb
+
+      - name: Mark as executable
+        run: chmod a+x publish/HermesProxy
+
+      - name: Archive Linux Proxy
+        run: zip -qr ../HermesProxy-linux.zip *
+        working-directory: publish
+
+      - name: Upload Linux Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hermes_proxy_linux_${{ github.sha }}
+          path: HermesProxy-linux.zip
+          if-no-files-found: error
+           
   add_launcher:
     runs-on: ubuntu-22.04
     permissions:
@@ -162,7 +202,7 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       contents: write
-    needs: add_launcher
+    needs: [add_launcher, linux_build]
 
     steps:
       #- name: Download artifact snapshot-default
@@ -180,6 +220,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: hermes_launcher_tbc_${{ github.sha }}
+          path: releases
+
+      - name: Download Linux Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: hermes_proxy_linux_${{ github.sha }}
           path: releases
 
       - name: Get current date
@@ -205,5 +251,16 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: releases/hermes_launcher_tbc.zip
           asset_name: "hermes_launcher_tbc.zip"
+          overwrite: true
+          make_latest: false
+
+      - name: Upload Linux Proxy
+        uses: svenstaro/upload-release-action@v2
+        with:
+          release_name: "v${{ inputs.tag }} Arctium + Hermes + Batch start script (updated ${{ steps.date.outputs.date }})"
+          tag: ${{ inputs.tag }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: releases/HermesProxy-linux.zip
+          asset_name: "HermesProxy-linux.zip"
           overwrite: true
           make_latest: false
